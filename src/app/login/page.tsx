@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { supabase } from '../lib/supabase' // Use that relative path that worked earlier
-
+import { supabase } from '../../lib/supabase'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
