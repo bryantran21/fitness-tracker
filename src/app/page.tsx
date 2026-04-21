@@ -4,6 +4,20 @@ export default async function Home() {
   // We're telling Supabase: "Give me everything from the workouts table"
   const { data, error } = await supabase.from('workouts').select('*')
 
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // This ensures the session is handled by your callback route
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    
+    if (error) {
+      console.error("Auth error:", error.message)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black text-white p-12 font-sans">
       <div className="max-w-2xl mx-auto">
