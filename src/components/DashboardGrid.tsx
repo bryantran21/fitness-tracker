@@ -3,17 +3,6 @@
 export default function DashboardGrid() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4 h-full max-w-6xl mx-auto p-4">
-      
-      {/* CHECK-IN (Large Main Box) */}
-      <div className="md:col-span-2 md:row-span-1 bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 flex flex-col justify-between hover:border-purple-500/50 transition-all group">
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Check-in</h2>
-          <p className="text-gray-400">Scheduled: <span className="text-purple-400 font-mono">Push Day A</span></p>
-        </div>
-        <button className="mt-8 bg-white text-black py-4 rounded-xl font-bold group-hover:bg-purple-500 group-hover:text-white transition-all">
-          Start Workout
-        </button>
-      </div>
 
       {/* PLAN WORKOUT (Vertical or Square) */}
       <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 flex flex-col justify-between hover:border-blue-500/50 transition-all">
@@ -26,6 +15,17 @@ export default function DashboardGrid() {
             </div>
           ))}
         </div>
+      </div>
+      
+      {/* CHECK-IN (Large Main Box) */}
+      <div className="md:col-span-2 md:row-span-1 bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 flex flex-col justify-between hover:border-purple-500/50 transition-all group">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-2">Check-in</h2>
+          <p className="text-gray-400">Scheduled: <span className="text-purple-400 font-mono">Push Day A</span></p>
+        </div>
+        <button className="mt-8 bg-white text-black py-4 rounded-xl font-bold group-hover:bg-purple-500 group-hover:text-white transition-all">
+          Start Workout
+        </button>
       </div>
 
       {/* VIEW GRAPHS (Wide or Square) */}

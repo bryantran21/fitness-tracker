@@ -1,55 +1,68 @@
-import { createClient } from '@/lib/supabaseServer'; // Use the server-side client we made
-import { redirect } from 'next/navigation';
+'use client'
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+import { useState } from 'react'
+import ActivityCalendar from '../../components/ActivityCalender'
+import SplitEditor from '@/components/SplitEditor'
 
-  // Check if the user is actually logged in
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  // If no user is found, kick them back to login
-  if (error || !user) {
-    redirect('/login');
-  }
+export default function DashboardPage() {
+  const [isEditing, setIsEditing] = useState(false)
 
   return (
-    <main className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <header className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-3xl font-bold">Iron Dashboard</h1>
-            <p className="text-gray-400">Welcome back, {user.email}</p>
-          </div>
-          <form action="/auth/signout" method="post">
-            <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm">
-              Sign Out
-            </button>
-          </form>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Stats Cards */}
-          <div className="p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
-            <h3 className="text-gray-500 text-sm uppercase tracking-wider mb-2">Workouts</h3>
-            <p className="text-3xl font-mono">0</p>
-          </div>
-          <div className="p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
-            <h3 className="text-gray-500 text-sm uppercase tracking-wider mb-2">Volume (lbs)</h3>
-            <p className="text-3xl font-mono text-purple-500">0</p>
-          </div>
-          <div className="p-6 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
-            <h3 className="text-gray-500 text-sm uppercase tracking-wider mb-2">Days Active</h3>
-            <p className="text-3xl font-mono">0</p>
-          </div>
-        </div>
-
-        <div className="mt-12 p-12 border-2 border-dashed border-white/5 rounded-3xl text-center">
-          <p className="text-gray-500 italic">No workouts logged yet. Ready to hit the iron?</p>
-          <button className="mt-6 px-8 py-3 bg-purple-600 rounded-full font-bold hover:bg-purple-500 transition-all">
-            + Start New Session
-          </button>
+    <main className="min-h-screen bg-black text-white p-4 pb-24 max-w-md mx-auto">
+      {/* TOP NAV */}
+      <div className="flex justify-between items-center py-6">
+        <h1 className="text-2xl font-black italic tracking-tighter">
+          IRON <span className="text-purple-500 text-3xl">LOG</span>
+        </h1>
+        <div className="bg-white/10 p-2 rounded-full w-10 h-10 flex items-center justify-center border border-white/10">
+          <span className="text-xs font-bold">BT</span>
         </div>
       </div>
+
+      {isEditing ? (
+        /* --- THE EDITOR VIEW --- */
+        <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-300">
+          <button 
+            onClick={() => setIsEditing(false)}
+            className="text-gray-500 text-sm font-bold flex items-center gap-2 mb-2"
+          >
+            ← Back to Dashboard
+          </button>
+          <SplitEditor onSave={() => setIsEditing(false)} />
+        </div>
+      ) : (
+        /* --- THE MAIN VIEW --- */
+        <div className="flex flex-col gap-4 animate-in fade-in duration-500">
+          
+          {/* 1. THE MAIN ACTION (Check-in) */}
+          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8">
+            <p className="text-purple-400 text-xs font-black mb-1 uppercase tracking-widest">Today's Session</p>
+            <h2 className="text-3xl font-black mb-6">Push Day A</h2>
+            <button className="w-full py-5 bg-white text-black text-lg font-black rounded-2xl active:scale-95 transition-transform shadow-[0_10px_30px_rgba(255,255,255,0.1)]">
+              CHECK IN
+            </button>
+          </div>
+
+          {/* 2. THE TRACKER (Calendar) */}
+          <ActivityCalendar />
+
+          {/* 3. THE PLANNER BUTTON (Triggers the Editor) */}
+          <div 
+            onClick={() => setIsEditing(true)}
+            className="bg-[#111] border border-white/5 rounded-3xl p-6 flex justify-between items-center cursor-pointer active:bg-white/5 transition-colors"
+          >
+            <div>
+              <h3 className="font-bold text-lg">Edit Training Split</h3>
+              <p className="text-xs text-gray-500">5 days / week scheduled</p>
+            </div>
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+              <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
-  );
+  )
 }
