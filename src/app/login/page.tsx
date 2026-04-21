@@ -1,17 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const router = useRouter()
+
+  // NEW: This effect listens for a session change (like a successful Google login)
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.push('/dashboard')
+      }
+    }
+
+    // Check immediately on load
+    checkUser()
+
+    // Also listen for auth state changes in real-time
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        router.push('/dashboard')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
 
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        // Force the flow to go through the callback route
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
@@ -38,7 +63,6 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-white mb-2">Fitness Tracker</h1>
         <p className="text-gray-400 mb-8 text-sm">Sign in to start tracking your progress.</p>
         
-        {/* --- GOOGLE SSO BUTTON --- */}
         <button 
           onClick={handleGoogleLogin}
           className="w-full mb-6 py-3.5 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transition-all active:scale-[0.98]"
@@ -52,7 +76,6 @@ export default function LoginPage() {
           <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#0a0a0a] px-2 text-gray-500">Or continue with email</span></div>
         </div>
 
-        {/* --- MAGIC LINK FORM --- */}
         <form onSubmit={handleMagicLink} className="space-y-4">
           <input
             type="email"
