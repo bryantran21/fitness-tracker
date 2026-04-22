@@ -22,12 +22,6 @@ export default function DashboardPage() {
       {isEditing ? (
         /* --- THE EDITOR VIEW --- */
         <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-300">
-          <button 
-            onClick={() => setIsEditing(false)}
-            className="text-gray-500 text-sm font-bold flex items-center gap-2 mb-2"
-          >
-            ← Back to Dashboard
-          </button>
           <SplitEditor onSave={() => setIsEditing(false)} />
         </div>
       ) : (
