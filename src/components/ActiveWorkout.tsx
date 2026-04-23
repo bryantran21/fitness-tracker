@@ -3,200 +3,178 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const BASE_EXERCISES = ['Bench Press', 'Squat', 'Deadlift', 'Bicep Curl', 'Lat Pulldown', 'Shoulder Press', 'Leg Press', 'Incline Press', 'Tricep Pushdown', 'Leg Extensions']
+// Expanded list for better filtering
+const EXERCISE_DATABASE = [
+  { name: 'Bench Press', group: 'Chest' },
+  { name: 'Incline Press', group: 'Chest' },
+  { name: 'Dumbbell Flyes', group: 'Chest' },
+  { name: 'Pullups', group: 'Back' },
+  { name: 'Lat Pulldown', group: 'Back' },
+  { name: 'Deadlift', group: 'Back' },
+  { name: 'Squat', group: 'Legs' },
+  { name: 'Leg Press', group: 'Legs' },
+  { name: 'Shoulder Press', group: 'Shoulders' },
+  { name: 'Lateral Raise', group: 'Shoulders' },
+  { name: 'Bicep Curl', group: 'Biceps' },
+  { name: 'Tricep Pushdown', group: 'Triceps' },
+  { name: 'Plank', group: 'Abs' },
+]
 
 export default function ActiveWorkout({ onFinished }: { onFinished: () => void }) {
   const [todaySplit, setTodaySplit] = useState<any>(null)
-  const [selectedExercise, setSelectedExercise] = useState<string | null>(null)
-  const [equipment, setEquipment] = useState<'Cable' | 'Free Weight' | 'Machine'>('Free Weight')
-  const [sets, setSets] = useState([{ reps: '', weight: '' }])
-  const [lastSession, setLastSession] = useState<any>(null)
+  const [activeMuscleGroup, setActiveMuscleGroup] = useState<string | null>(null)
+  const [workoutQueue, setWorkoutQueue] = useState<any[]>([]) // Your "Downward" log
   const [search, setSearch] = useState('')
 
-  // 1. Fetch Today's Split
   useEffect(() => {
     const getTodayPlan = async () => {
       const today = new Date().getDay()
       const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase.from('training_splits').select('*').eq('user_id', user?.id).eq('day_of_week', today).maybeSingle()
       
-      const { data, error } = await supabase
-        .from('training_splits')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('day_of_week', today)
-        // Use .maybeSingle() instead of .single() to avoid errors if today is a rest day
-        .maybeSingle()
-      
-      if (data) setTodaySplit(data)
+      if (data) {
+        setTodaySplit(data)
+        // Auto-set the first muscle group as active filter
+        if (data.muscle_groups?.length > 0) setActiveMuscleGroup(data.muscle_groups[0])
+      }
     }
     getTodayPlan()
   }, [])
 
-  // 2. Fetch History when exercise/equipment changes
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (!selectedExercise) return
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { data } = await supabase
-        .from('workout_logs')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('exercise_name', selectedExercise)
-        .eq('equipment_type', equipment)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      setLastSession(data || null)
-    }
-    fetchHistory()
-  }, [selectedExercise, equipment])
-
-  const handleComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Insert the log
-    const { error: logError } = await supabase.from('workout_logs').insert({
-      user_id: user.id,
-      exercise_name: selectedExercise,
-      equipment_type: equipment,
-      sets: sets
-    })
-
-    // Check-in for the calendar
-    await supabase.from('check_ins').insert({
-      user_id: user.id,
-      date: new Date().toISOString().split('T')[0]
-    })
-
-    if (logError) console.error(logError)
-    onFinished()
+  const addToQueue = (exerciseName: string) => {
+    setWorkoutQueue([...workoutQueue, { 
+        name: exerciseName, 
+        equipment: 'Free Weight', 
+        sets: [{ reps: '', weight: '' }] 
+    }])
+    setSearch('')
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 pb-32 max-w-md mx-auto animate-in fade-in duration-500">
+    <div className="min-h-screen bg-black text-white p-6 pb-40 max-w-md mx-auto animate-in fade-in duration-500">
       {/* HEADER */}
       <div className="flex justify-between items-start mb-8">
-        <div>
-          <h2 className="text-2xl font-black italic uppercase tracking-tighter">
-            {todaySplit?.day_name || "Extra Session"}
-          </h2>
-          <p className="text-purple-500 font-bold text-[10px] uppercase tracking-[0.2em]">
-            {todaySplit?.muscle_groups?.join(' + ') || 'Manual Log'}
-          </p>
-        </div>
-        <button 
-          onClick={onFinished}
-          className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase"
-        >
-          Cancel
-        </button>
+        <h2 className="text-2xl font-black italic uppercase tracking-tighter leading-none">
+          {todaySplit?.day_name || "Free Session"}
+        </h2>
+        <button onClick={onFinished} className="text-[10px] font-black uppercase text-gray-500 border border-white/10 px-3 py-1 rounded-full">Cancel</button>
       </div>
 
-      {!selectedExercise ? (
-        /* SEARCH VIEW */
-        <div className="space-y-4">
-          <input 
-            placeholder="Search Exercise..."
-            className="w-full p-5 bg-[#111] border border-white/10 rounded-2xl focus:border-purple-500 outline-none transition-all font-bold"
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-            {BASE_EXERCISES.filter(ex => ex.toLowerCase().includes(search.toLowerCase())).map(ex => (
-              <button 
-                key={ex} 
-                onClick={() => setSelectedExercise(ex)}
-                className="w-full p-5 bg-white/5 rounded-2xl border border-white/5 text-left font-black uppercase italic text-sm hover:bg-purple-500/10 transition-all"
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : (
-        /* LOGGING VIEW */
-        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-          <div>
-            <button onClick={() => setSelectedExercise(null)} className="text-purple-500 text-[10px] font-black mb-1 uppercase tracking-widest">← Change Exercise</button>
-            <h3 className="text-4xl font-black uppercase italic leading-none tracking-tighter">{selectedExercise}</h3>
-          </div>
-
-          {/* HISTORY BUBBLE */}
-          {lastSession && (
-            <div className="bg-purple-500/5 border border-purple-500/20 p-4 rounded-2xl">
-              <p className="text-[10px] text-purple-400 font-black uppercase tracking-widest mb-2">Previous ({equipment})</p>
-              <div className="flex flex-wrap gap-3">
-                {lastSession.sets.map((set: any, idx: number) => (
-                  <div key={idx} className="text-xs font-bold text-gray-300">
-                    <span className="text-purple-500/50">S{idx+1}:</span> {set.weight}lb × {set.reps}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* EQUIPMENT SELECTOR */}
-          <div className="flex gap-2">
-            {['Cable', 'Free Weight', 'Machine'].map((type) => (
-              <button
-                key={type}
-                onClick={() => setEquipment(type as any)}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-black border transition-all ${
-                  equipment === type ? 'bg-white text-black border-white' : 'bg-transparent border-white/10 text-gray-500'
-                }`}
-              >
-                {type.toUpperCase()}
-              </button>
-            ))}
-          </div>
-
-          {/* SETS ENTRY */}
-          <div className="space-y-3">
-            {sets.map((set, i) => (
-              <div key={i} className="flex gap-3 items-center bg-[#0a0a0a] p-4 rounded-2xl border border-white/5">
-                <span className="font-black text-purple-500 w-6">#{i + 1}</span>
-                <input 
-                  placeholder="LBS" 
-                  type="number"
-                  inputMode="numeric"
-                  className="w-full bg-white/5 p-3 rounded-xl border border-white/5 text-center font-black text-white"
-                  value={set.weight}
-                  onChange={(e) => {
-                    const newSets = [...sets]; newSets[i].weight = e.target.value; setSets(newSets);
-                  }}
-                />
-                <input 
-                  placeholder="REPS" 
-                  type="number"
-                  inputMode="numeric"
-                  className="w-full bg-white/5 p-3 rounded-xl border border-white/5 text-center font-black text-white"
-                  value={set.reps}
-                  onChange={(e) => {
-                    const newSets = [...sets]; newSets[i].reps = e.target.value; setSets(newSets);
-                  }}
-                />
-              </div>
-            ))}
-            <button 
-              onClick={() => setSets([...sets, { reps: '', weight: '' }])}
-              className="w-full py-4 border-2 border-dashed border-white/5 rounded-2xl text-gray-600 text-[10px] font-black uppercase tracking-widest hover:border-purple-500/50 hover:text-purple-500 transition-all"
-            >
-              + Add Set
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* FINISH BUTTON */}
-      <div className="fixed bottom-8 left-4 right-4 max-w-md mx-auto">
+      {/* VERSION A: MUSCLE GROUP FILTERS */}
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-4 custom-scrollbar">
         <button 
-          onClick={handleComplete}
-          disabled={!selectedExercise}
-          className="w-full py-5 bg-white text-black font-black rounded-2xl shadow-2xl active:scale-95 transition-all disabled:opacity-20"
+          onClick={() => setActiveMuscleGroup(null)}
+          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border ${!activeMuscleGroup ? 'bg-white text-black' : 'bg-white/5 border-white/10 text-gray-500'}`}
         >
-          FINISH & CHECK-IN
+          All
+        </button>
+        {todaySplit?.muscle_groups?.map((group: string) => (
+          <button
+            key={group}
+            onClick={() => setActiveMuscleGroup(group)}
+            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase whitespace-nowrap transition-all border ${
+              activeMuscleGroup === group ? 'bg-purple-600 border-purple-500 text-white' : 'bg-white/5 border-white/5 text-gray-500'
+            }`}
+          >
+            {group}
+          </button>
+        ))}
+      </div>
+
+      {/* SEARCH & ADD SECTION */}
+      <div className="space-y-3 mb-12">
+        <input 
+          placeholder="Find exercise..."
+          className="w-full p-4 bg-[#0a0a0a] border border-white/5 rounded-2xl text-sm font-bold focus:border-purple-500 transition-all outline-none"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        
+        {/* Suggestion List (Filtered by active muscle group) */}
+        <div className="flex flex-wrap gap-2">
+          {EXERCISE_DATABASE
+            .filter(ex => (!activeMuscleGroup || ex.group === activeMuscleGroup))
+            .filter(ex => ex.name.toLowerCase().includes(search.toLowerCase()))
+            .slice(0, 6) // Keep it clean
+            .map(ex => (
+              <button
+                key={ex.name}
+                onClick={() => addToQueue(ex.name)}
+                className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black uppercase hover:bg-purple-500/20 transition-all"
+              >
+                + {ex.name}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+
+      {/* THE QUEUE (Lifts build downward) */}
+      <div className="space-y-10">
+        {workoutQueue.map((item, workoutIdx) => (
+          <div key={workoutIdx} className="animate-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-end mb-4">
+               <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white leading-none">{item.name}</h3>
+               <button 
+                onClick={() => setWorkoutQueue(workoutQueue.filter((_, i) => i !== workoutIdx))}
+                className="text-[8px] font-black text-red-500 uppercase tracking-widest"
+               >
+                 Remove
+               </button>
+            </div>
+
+            {/* SETS FOR THIS EXERCISE */}
+            <div className="space-y-2">
+              {item.sets.map((set: any, setIdx: number) => (
+                <div key={setIdx} className="flex gap-2 items-center">
+                  <div className="w-8 text-[10px] font-black text-purple-500">#{setIdx + 1}</div>
+                  <input 
+                    placeholder="LBS"
+                    type="number"
+                    className="flex-1 bg-white/5 border border-white/5 p-3 rounded-xl text-center font-bold text-sm"
+                    value={set.weight}
+                    onChange={(e) => {
+                        const newQueue = [...workoutQueue];
+                        newQueue[workoutIdx].sets[setIdx].weight = e.target.value;
+                        setWorkoutQueue(newQueue);
+                    }}
+                  />
+                  <input 
+                    placeholder="REPS"
+                    type="number"
+                    className="flex-1 bg-white/5 border border-white/5 p-3 rounded-xl text-center font-bold text-sm"
+                    value={set.reps}
+                    onChange={(e) => {
+                        const newQueue = [...workoutQueue];
+                        newQueue[workoutIdx].sets[setIdx].reps = e.target.value;
+                        setWorkoutQueue(newQueue);
+                    }}
+                  />
+                </div>
+              ))}
+              <button 
+                onClick={() => {
+                    const newQueue = [...workoutQueue];
+                    newQueue[workoutIdx].sets.push({ reps: '', weight: '' });
+                    setWorkoutQueue(newQueue);
+                }}
+                className="w-full py-2 bg-white/5 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase text-gray-600"
+              >
+                + Add Set
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* FINISH ACTION */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black to-transparent">
+        <button 
+          onClick={onFinished} // Wire this to a handleSave function similar to before
+          disabled={workoutQueue.length === 0}
+          className="w-full max-w-md mx-auto py-5 bg-white text-black font-black rounded-3xl text-lg uppercase italic tracking-tighter active:scale-95 transition-all disabled:opacity-20"
+        >
+          Finish & Log Workout
         </button>
       </div>
     </div>
