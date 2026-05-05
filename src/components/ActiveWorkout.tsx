@@ -33,7 +33,6 @@ function SortableWorkout({ item, idx, onRemove, onAddSet, onUpdateSet, onTypeCha
 
       <div className="flex justify-between items-center mb-6 relative z-10">
         <div className="flex items-center gap-4">
-          {/* DRAG HANDLE */}
           <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-2 text-gray-700 hover:text-purple-500 transition-colors">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M7 7h2v2H7V7zm0 4h2v2H7v-2zm4-4h2v2h-2V7zm0 4h2v2h-2v-2z"/></svg>
           </div>
@@ -98,9 +97,9 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
   const [workoutQueue, setWorkoutQueue] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isLogging, setIsLogging] = useState(false)
   const [userEmail, setUserEmail] = useState('')
 
-  // SENSORS: Configured for mobile with delay to distinguish between scroll and drag
   const sensors = useSensors(
     useSensor(TouchSensor, {
       activationConstraint: {
@@ -117,7 +116,6 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
       
       const today = new Date().getDay()
 
-      // Fetch today's split context
       const { data: split } = await supabase
         .from('training_splits')
         .select('*')
@@ -125,7 +123,6 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
         .eq('day_of_week', today)
         .maybeSingle()
 
-      // Fetch exercises from DB
       const { data: exData } = await supabase.from('exercises').select('*')
 
       setTodaySplit(split)
@@ -140,7 +137,7 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
     if (active.id !== over?.id) {
       setWorkoutQueue((items) => {
         const oldIndex = items.findIndex(i => i.id === active.id);
-        const newIndex = items.findIndex(i => i.id === over.id);
+        const newIndex = items.findIndex(i => i.id === over?.id);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
@@ -155,6 +152,39 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
     }])
     setSearch('')
   }
+
+  // --- LOGIC: FINISH AND LOG ---
+  const handleFinishSession = async () => {
+    if (workoutQueue.length === 0) return;
+    setIsLogging(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Calculate Total Volume Metric (Weight * Reps)
+    const totalVolume = workoutQueue.reduce((acc, exercise) => {
+      const exerciseVolume = exercise.sets.reduce((sAcc: number, set: any) => {
+        return sAcc + (Number(set.weight || 0) * Number(set.reps || 0));
+      }, 0);
+      return acc + exerciseVolume;
+    }, 0);
+
+    // Log the check-in to Supabase
+    const { error } = await supabase
+      .from('check_ins')
+      .insert({
+        user_id: user.id,
+        date: new Date().toISOString().split('T')[0],
+        volume_score: totalVolume // The Heat Metric
+      });
+
+    if (!error) {
+      onFinished(); // Trigger refresh back in Dashboard
+    } else {
+      console.error("Supabase Error:", error.message);
+      setIsLogging(false);
+    }
+  };
 
   const filteredExercises = exerciseDB.filter(ex => 
     ex.label.toLowerCase().includes(search.toLowerCase())
@@ -196,7 +226,6 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
             onChange={(e) => setSearch(e.target.value)}
           />
 
-          {/* DROPDOWN RESULTS */}
           {search.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,1)] z-[110] max-h-60 overflow-y-auto">
               {filteredExercises.length > 0 ? (
@@ -247,7 +276,7 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
           </SortableContext>
         </DndContext>
         
-        {workoutQueue.length === 0 && (
+        {workoutQueue.length === 0 && !loading && (
           <div className="text-center py-20 opacity-20 italic font-black uppercase tracking-[0.2em] text-sm">
             Queue is empty
           </div>
@@ -257,11 +286,11 @@ export default function ActiveWorkout({ onFinished }: { onFinished: () => void }
       {/* FIXED FOOTER */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black to-transparent z-[150]">
         <button 
-          onClick={onFinished}
-          disabled={workoutQueue.length === 0}
+          onClick={handleFinishSession}
+          disabled={workoutQueue.length === 0 || isLogging}
           className="w-full max-w-md mx-auto py-6 bg-white text-black font-black rounded-[2rem] text-xl uppercase italic tracking-tighter shadow-2xl active:scale-95 transition-all disabled:opacity-20 disabled:grayscale"
         >
-          FINISH & LOG SESSION
+          {isLogging ? "SYNCING SESSION..." : "FINISH & LOG SESSION"}
         </button>
       </div>
     </div>
