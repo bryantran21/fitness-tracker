@@ -1,54 +1,109 @@
 // src/components/DashboardGrid.tsx
+'use client'
 
-export default function DashboardGrid() {
+import { motion } from 'framer-motion'
+import { Calendar, Activity, BarChart3, Target, ArrowRight } from 'lucide-react'
+
+export default function DashboardGrid({ onStartWorkout, todaySplit }: { onStartWorkout?: () => void, todaySplit?: any }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4 h-full max-w-6xl mx-auto p-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4 h-full max-w-6xl mx-auto p-4 font-sans">
 
-      {/* PLAN WORKOUT (Vertical or Square) */}
-      <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 flex flex-col justify-between hover:border-blue-500/50 transition-all">
-        <h3 className="text-lg font-bold text-white">Plan Workout</h3>
-        <p className="text-sm text-gray-500">Set your weekly training split.</p>
-        <div className="mt-4 flex gap-1">
-          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-            <div key={i} className={`h-8 w-full rounded-md border border-white/5 ${i < 5 ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-gray-600'} flex items-center justify-center text-xs font-bold`}>
+      {/* PLAN WORKOUT */}
+      <motion.div 
+        whileHover={{ translateY: -2 }}
+        className="bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-6 flex flex-col justify-between backdrop-blur-md hover:border-white/20 transition-all cursor-pointer group"
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-sm font-black italic uppercase tracking-widest text-gray-400 group-hover:text-white transition-colors">Plan Workout</h3>
+            <p className="text-[10px] text-gray-600 uppercase font-bold mt-1">Weekly Split</p>
+          </div>
+          <Calendar size={18} className="text-gray-700 group-hover:text-purple-500 transition-colors" />
+        </div>
+        
+        <div className="mt-8 flex gap-1.5">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+            <div key={i} className={`h-10 flex-1 rounded-xl border transition-all flex items-center justify-center text-[10px] font-black ${
+              // Index 1 (Mon) through Index 5 (Fri)
+              i >= 1 && i <= 5 
+                ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' 
+                : 'bg-white/5 border-white/5 text-gray-700'
+            }`}>
               {day}
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
       
-      {/* CHECK-IN (Large Main Box) */}
-      <div className="md:col-span-2 md:row-span-1 bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 flex flex-col justify-between hover:border-purple-500/50 transition-all group">
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Check-in</h2>
-          <p className="text-gray-400">Scheduled: <span className="text-purple-400 font-mono">Push Day A</span></p>
+      {/* CHECK-IN */}
+      <motion.div 
+        onClick={onStartWorkout}
+        whileHover={{ translateY: -2 }}
+        className="md:col-span-2 md:row-span-1 bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 flex flex-col justify-between hover:border-purple-500/30 transition-all group relative overflow-hidden cursor-pointer"
+      >
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-600/10 blur-[100px] rounded-full group-hover:bg-purple-600/20 transition-all"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-4">
+             <div className="h-2 w-2 rounded-full bg-purple-500 animate-pulse"></div>
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">Ready to sync</span>
+          </div>
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white leading-none">
+            Check-in
+          </h2>
+          <p className="text-gray-500 font-bold mt-2 uppercase text-xs tracking-tight">
+            Next up: <span className="text-white">{todaySplit?.day_name || "Recovery"}</span>
+          </p>
         </div>
-        <button className="mt-8 bg-white text-black py-4 rounded-xl font-bold group-hover:bg-purple-500 group-hover:text-white transition-all">
-          Start Workout
-        </button>
-      </div>
 
-      {/* VIEW GRAPHS (Wide or Square) */}
-      <div className="md:col-span-1 bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 flex flex-col justify-between hover:border-green-500/50 transition-all">
-        <h3 className="text-lg font-bold text-white">View Graphs</h3>
-        <div className="h-24 w-full bg-gradient-to-t from-green-500/10 to-transparent border-b border-green-500/20 flex items-end pb-2">
-           {/* Replace this with a real Chart component later */}
-           <div className="w-full flex justify-between items-end h-full px-2 gap-1">
-              {[40, 70, 45, 90, 65, 80].map((h, i) => (
-                <div key={i} style={{ height: `${h}%` }} className="w-full bg-green-500/40 rounded-t-sm"></div>
-              ))}
-           </div>
+        <div className="mt-8 flex items-center justify-between relative z-10">
+          <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Tap to start session</span>
+          <div className="bg-white text-black h-14 w-14 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
+             <ArrowRight size={24} strokeWidth={3} />
+          </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* CONSISTENCY SCORE (Small Detail Box) */}
-      <div className="md:col-span-2 bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 flex items-center justify-between">
-        <div>
-          <h3 className="text-white font-bold">Goal: 5 Days / Week</h3>
-          <p className="text-sm text-gray-500 italic">"Stick to it, Bryan."</p>
+      {/* VIEW GRAPHS - UNDER CONSTRUCTION */}
+      <motion.div 
+        className="md:col-span-1 bg-[#0a0a0a] border border-white/5 rounded-[2rem] p-6 flex flex-col justify-between relative overflow-hidden group"
+      >
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+          <div className="bg-purple-600 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-[0.4em] shadow-[0_0_20px_rgba(159,85,255,0.4)] transition-transform group-hover:scale-110">
+            ** Under Construction **
+          </div>
         </div>
-        <div className="text-4xl font-black text-purple-500">80%</div>
-      </div>
+
+        <div className="flex justify-between items-start mb-4 blur-[3px]">
+          <h3 className="text-sm font-black italic uppercase tracking-widest text-gray-400">Intensity</h3>
+          <BarChart3 size={18} className="text-gray-700" />
+        </div>
+        
+        <div className="h-24 w-full flex items-end gap-1 px-1 blur-[5px]">
+          {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+            <div key={i} style={{ height: `${h}%` }} className="w-full rounded-t-lg bg-white/10"></div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* CONSISTENCY SCORE */}
+      <motion.div 
+        whileHover={{ translateY: -2 }}
+        className="md:col-span-2 bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] p-8 flex items-center justify-between hover:border-white/20 transition-all group"
+      >
+        <div className="flex items-center gap-6">
+          <div className="h-16 w-16 rounded-full border-4 border-purple-500/20 border-t-purple-500 flex items-center justify-center">
+             <Target size={24} className="text-purple-500" />
+          </div>
+          <div>
+            <h3 className="text-white text-xl font-black italic uppercase tracking-tighter">Consistency</h3>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Current commitment</p>
+          </div>
+        </div>
+        <div className="text-6xl font-black italic text-white tracking-tighter">
+          80<span className="text-purple-500 text-3xl">%</span>
+        </div>
+      </motion.div>
 
     </div>
   )
