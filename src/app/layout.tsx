@@ -15,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Iron Log",
   description: "High-intensity fitness synchronization engine",
-  icons: {
-    icon: "/icon.png",
-  },
 };
 
 export default function RootLayout({
